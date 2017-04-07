@@ -1,20 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using ClosedXML.Excel;
+using System;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ClosedXML.Excel;
 
 namespace ClosedXML_Memory_Issues
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
+            var stopwatch = Stopwatch.StartNew();
             using (var wb = new XLWorkbook("MemoryIssuesTemplate.xlsx"))
             {
-                
                 using (var ws = wb.Worksheet("DATA"))
                 {
                     var tbl = ws.Table("tblDATA");
@@ -22,7 +20,7 @@ namespace ClosedXML_Memory_Issues
                     var dt = new DataTable();
                     bool firstRow = true;
 
-                    foreach(IXLRangeRow row in tbl.Rows())
+                    foreach (IXLRangeRow row in tbl.Rows())
                     {
                         if (firstRow)
                         {
@@ -37,7 +35,7 @@ namespace ClosedXML_Memory_Issues
                             dt.Rows.Add();
                             int i = 0;
 
-                            foreach(IXLCell cell in row.Cells())
+                            foreach (IXLCell cell in row.Cells())
                             {
                                 dt.Rows[dt.Rows.Count - 1][i] = cell.Value.ToString();
                                 i++;
@@ -53,9 +51,7 @@ namespace ClosedXML_Memory_Issues
                         dt.Merge(dt2);
                     }
 
-
                     tbl.InsertRowsBelow(dt.Rows.Count);
-
 
                     tbl.DataRange.FirstCell().InsertData(dt.AsEnumerable().Skip(1));
 
@@ -68,14 +64,17 @@ namespace ClosedXML_Memory_Issues
 
                     tbl.AutoFilter.Column(4).AddFilter("sda");
 
-
                     ws.Columns().AdjustToContents(1, 20);
                 }
-        
-            wb.SaveAs("MemoryIssuesSaveAs.xlsx");
-            }
 
-            Environment.Exit(0);
+                wb.SaveAs("MemoryIssuesSaveAs.xlsx");
+            }
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            Console.WriteLine("Finished in {0}", stopwatch.Elapsed);
+            Console.ReadKey(false);
         }
     }
 }
